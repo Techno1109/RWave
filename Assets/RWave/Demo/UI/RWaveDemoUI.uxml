@@ -1,0 +1,104 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="root" style="flex-grow: 1; padding: 23px;">
+        <ui:Label text="RWave Audio Management Demo" name="title" class="title-label" style="font-size: 48px;" />
+
+        <!-- タブヘッダー -->
+        <ui:VisualElement name="tab-header" class="tab-header" style="flex-direction: row; margin-top: 15px;">
+            <ui:Button name="tab-audio-playback" text="Audio &amp; Playback" class="tab-button tab-button-active" />
+            <ui:Button name="tab-volume-handler" text="Volume &amp; Handler Control" class="tab-button" />
+        </ui:VisualElement>
+
+        <!-- Tab 1: Audio & Playback -->
+        <ui:VisualElement name="tab-content-audio-playback" class="tab-content tab-content-active">
+            <ui:ScrollView name="scroll-audio-playback" style="flex-grow: 1;">
+                <!-- Audio Loading Section -->
+                <ui:VisualElement name="load-section" class="section">
+                    <ui:Label text="Audio Loading" class="section-title" style="font-size: 30px;" />
+                    <ui:VisualElement class="control-group">
+                        <ui:TextField label="Address" name="address-field" style="font-size: 26px;" />
+                        <ui:TextField label="Resource Group (Optional)" name="resource-group-field" style="font-size: 26px;" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="load-buttons" class="button-group" style="flex-direction: row;">
+                        <ui:Button text="Load (Async)" name="load-button" class="action-button" style="font-size: 22px;" />
+                        <ui:Button text="Load (Sync)" name="sync-load-button" class="action-button" style="font-size: 22px;" />
+                    </ui:VisualElement>
+                    <ui:Label name="load-status" class="status-label" style="font-size: 22px;" />
+                </ui:VisualElement>
+
+                <!-- Playback Control Section -->
+                <ui:VisualElement name="playback-section" class="section">
+                    <ui:Label text="Playback Control" class="section-title" style="font-size: 30px;" />
+                    <ui:VisualElement class="control-group">
+                        <ui:TextField label="Audio Address" name="play-address-field" style="font-size: 26px;" />
+                        <ui:TextField label="AudioSource Name" name="audiosource-name-field" style="font-size: 26px;" />
+                        <ui:TextField label="Resource Group (Optional)" name="play-resource-group-field" style="font-size: 26px;" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="control-group">
+                        <ui:Toggle label="Use Play Volume" name="use-play-volume-toggle" value="false" style="font-size: 26px;" />
+                        <ui:Slider label="Play Volume" name="play-volume-slider" low-value="0" high-value="100" value="50" show-input-field="true" style="font-size: 26px; --unity-text-field-width: 150px;" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="playback-buttons" class="button-group" style="flex-direction: row;">
+                        <ui:Button text="Play" name="play-button" class="action-button" style="font-size: 22px;" />
+                        <ui:Button text="Stop" name="stop-button" class="action-button" style="font-size: 22px;" />
+                        <ui:Button text="Force Stop" name="force-stop-button" class="action-button" style="font-size: 22px;" />
+                    </ui:VisualElement>
+                    <ui:Label name="handler-status-label" text="No handler" class="status-label" style="font-size: 22px;" />
+                </ui:VisualElement>
+            </ui:ScrollView>
+        </ui:VisualElement>
+
+        <!-- Tab 2: Volume & Handler Control -->
+        <ui:VisualElement name="tab-content-volume-handler" class="tab-content" style="display: none;">
+            <ui:ScrollView name="scroll-volume-handler" style="flex-grow: 1;">
+                <!-- Volume Control Section -->
+                <ui:VisualElement name="volume-section" class="section">
+                    <ui:Label text="Volume Control" class="section-title" style="font-size: 30px;" />
+                    <ui:VisualElement name="mixer-volume-control" class="control-group">
+                        <ui:TextField label="AudioMixerGroup Name" name="mixer-group-name-field" style="font-size: 26px;" />
+                        <ui:Slider label="AudioMixerGroup Volume" name="mixer-volume-slider" low-value="0" high-value="100" value="0" show-input-field="true" style="font-size: 26px; --unity-text-field-width: 150px;" />
+                        <ui:VisualElement class="button-group" style="flex-direction: row;">
+                            <ui:Button text="Get Current Volume" name="get-mixer-volume-button" class="action-button" style="font-size: 22px;" />
+                            <ui:Button text="Set AudioMixerGroup Volume" name="set-mixer-volume-button" class="action-button" style="font-size: 22px;" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="source-volume-control" class="control-group">
+                        <ui:TextField label="AudioSource Name" name="source-name-field" style="font-size: 26px;" />
+                        <ui:Slider label="AudioSource Volume" name="source-volume-slider" low-value="0" high-value="100" value="0" show-input-field="true" fill="false" direction="Horizontal" inverted="false" style="font-size: 26px; --unity-text-field-width: 150px;" />
+                        <ui:VisualElement class="button-group" style="flex-direction: row;">
+                            <ui:Button text="Get Current Volume" name="get-source-volume-button" class="action-button" style="font-size: 22px;" />
+                            <ui:Button text="Set AudioSource Volume" name="set-source-volume-button" class="action-button" style="font-size: 22px;" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <!-- Handler Control Section -->
+                <ui:VisualElement name="handler-control-section" class="section">
+                    <ui:Label text="Handler Control" class="section-title" style="font-size: 30px;" />
+
+                    <!-- Handler一覧と選択 -->
+                    <ui:VisualElement name="handler-list-container" class="control-group">
+                        <ui:Label text="Active Handlers" style="font-size: 24px; margin-bottom: 8px; color: rgb(100, 180, 255);" />
+                        <ui:ListView
+                            name="handler-list-view"
+                            show-border="true"
+                            selection-type="Single"
+                            style="min-height: 150px; max-height: 300px; background-color: rgb(30, 30, 40); border-color: rgb(60, 120, 200); border-width: 1px;" />
+                        <ui:Label name="selected-handler-label" text="No handler selected" class="status-label" style="font-size: 20px; margin-top: 8px;" />
+                    </ui:VisualElement>
+
+                    <!-- Handler制御UI -->
+                    <ui:VisualElement class="control-group">
+                        <ui:Slider label="Handler Volume" name="handler-volume-slider" low-value="0" high-value="100" value="50" show-input-field="true" style="font-size: 26px; --unity-text-field-width: 150px;" />
+                        <ui:TextField label="Fade Duration (s)" name="handler-fade-duration-field" value="0" style="font-size: 26px;" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="button-group" style="flex-direction: row;">
+                        <ui:Button text="Set Handler Volume" name="set-handler-volume-button" class="action-button" style="font-size: 22px;" />
+                        <ui:Button text="Check Playing Status" name="check-handler-playing-button" class="action-button" style="font-size: 22px;" />
+                        <ui:Button text="Stop Handler" name="stop-handler-button" class="action-button" style="font-size: 22px;" />
+                    </ui:VisualElement>
+                    <ui:Label name="handler-playing-label" text="-" class="status-label" style="font-size: 22px;" />
+                </ui:VisualElement>
+            </ui:ScrollView>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

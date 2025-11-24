@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a1519c8c45e41b18bd5a3110382e28c, type: 3}
+  m_Name: SampleSetting
+  m_EditorClassIdentifier: 
+  _audioMixer: {fileID: 24100000, guid: 2b71fcb7d6cf5274187698896470bc67, type: 2}
+  _masterDefaultVolume: 50
+  _masterMixerGroup: {fileID: 24300002, guid: 2b71fcb7d6cf5274187698896470bc67, type: 2}
+  _masterExposedParameterName: MasterVolume
+  _masterMaxDB: 0
+  _audioMixerGroupSettings:
+  - _audioMixerGroup: {fileID: 6805686689848357406, guid: 2b71fcb7d6cf5274187698896470bc67, type: 2}
+    _exposedParameterName: BgmVolume
+    _maxDB: 0
+    _defaultVolume: 50
+  - _audioMixerGroup: {fileID: -9142536966841187835, guid: 2b71fcb7d6cf5274187698896470bc67, type: 2}
+    _exposedParameterName: EnvironmentVolume
+    _maxDB: 0
+    _defaultVolume: 50
+  - _audioMixerGroup: {fileID: -7092665378998201203, guid: 2b71fcb7d6cf5274187698896470bc67, type: 2}
+    _exposedParameterName: SeVolume
+    _maxDB: 0
+    _defaultVolume: 50
+  - _audioMixerGroup: {fileID: -5441301118459520253, guid: 2b71fcb7d6cf5274187698896470bc67, type: 2}
+    _exposedParameterName: SystemVolume
+    _maxDB: 0
+    _defaultVolume: 50
+  _audioSourceSettings:
+  - _audioSourceName: Bgm
+    _audioMixerGroup: {fileID: 6805686689848357406, guid: 2b71fcb7d6cf5274187698896470bc67, type: 2}
+    _allowDuplicatePlay: 1
+    _playBackMode: 1
+    _defaultVolume: 50
+    _maxSoundCount: 1
+    _attackTime: 300
+    _releaseTime: 300
+    _crossFadeSetting:
+      _crossFadeActiveFlag: 1
+      _attackTime: 1000
+      _releaseTime: 1000
+  - _audioSourceName: Environment
+    _audioMixerGroup: {fileID: -9142536966841187835, guid: 2b71fcb7d6cf5274187698896470bc67, type: 2}
+    _allowDuplicatePlay: 0
+    _playBackMode: 1
+    _defaultVolume: 50
+    _maxSoundCount: 4
+    _attackTime: 300
+    _releaseTime: 300
+    _crossFadeSetting:
+      _crossFadeActiveFlag: 0
+      _attackTime: 0
+      _releaseTime: 0
+  - _audioSourceName: Se
+    _audioMixerGroup: {fileID: -7092665378998201203, guid: 2b71fcb7d6cf5274187698896470bc67, type: 2}
+    _allowDuplicatePlay: 1
+    _playBackMode: 0
+    _defaultVolume: 50
+    _maxSoundCount: 5
+    _attackTime: 0
+    _releaseTime: 0
+    _crossFadeSetting:
+      _crossFadeActiveFlag: 0
+      _attackTime: 0
+      _releaseTime: 0
+  - _audioSourceName: Sysem
+    _audioMixerGroup: {fileID: -5441301118459520253, guid: 2b71fcb7d6cf5274187698896470bc67, type: 2}
+    _allowDuplicatePlay: 1
+    _playBackMode: 0
+    _defaultVolume: 50
+    _maxSoundCount: 2
+    _attackTime: 0
+    _releaseTime: 0
+    _crossFadeSetting:
+      _crossFadeActiveFlag: 0
+      _attackTime: 0
+      _releaseTime: 0
+  _audioPacks:
+  - {fileID: 11400000, guid: 3b21a06f5f82df14593d0e52a1c02d17, type: 2}

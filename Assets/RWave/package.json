@@ -1,0 +1,33 @@
+{
+  "name": "com.rwave",
+  "version": "0.1.0",
+  "displayName": "RWave - Audio Management Framework",
+  "description": "RWave is a Unity audio management framework that provides audio resource management using Unity Addressables, BGM/SE/Voice audio source management, audio volume control and fading systems, and cross-fade capabilities for seamless audio transitions.",
+  "unity": "6000.2",
+  "keywords": [
+    "audio",
+    "sound",
+    "bgm",
+    "se",
+    "voice",
+    "addressables",
+    "fade",
+    "cross-fade",
+    "audio-management"
+  ],
+  "author": {
+    "name": "Techno1109",
+    "url": "https://github.com/Techno1109"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "com.unity.addressables": "2.6.0"
+  },
+  "samples": [
+    {
+      "displayName": "Demo Scene",
+      "description": "Sample scene demonstrating RWave audio management features",
+      "path": "Demo"
+    }
+  ]
+}
