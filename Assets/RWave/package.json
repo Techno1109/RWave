@@ -1,6 +1,6 @@
 {
   "name": "com.rwave",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "displayName": "RWave - Audio Management Framework",
   "description": "RWave is a Unity audio management framework that provides audio resource management using Unity Addressables, BGM/SE/Voice audio source management, audio volume control and fading systems, and cross-fade capabilities for seamless audio transitions.",
   "unity": "6000.2",

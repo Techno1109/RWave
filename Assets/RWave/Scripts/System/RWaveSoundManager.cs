@@ -22,8 +22,8 @@ namespace RWave.System
         public static bool isInitialized => s_instance && s_instance._isInitialized;
         private static RWaveSoundManager s_instance;
 
-        [SerializeField,Header("Awake時に自動的に初期化処理を行います")]
-        private bool _autoInitializeOnAwake = true;
+        [SerializeField,Header("Start時に自動的に初期化処理を行います")]
+        private bool _autoInitializeOnStart = true;
         [SerializeField,Header("Setting")]
         private RWaveSetting _setting;
         private bool _isValid = false;
@@ -47,7 +47,7 @@ namespace RWave.System
             s_instance = null;
         }
 
-        private void Awake()
+        private void Start()
         {
             if (s_instance != null)
             {
@@ -57,11 +57,11 @@ namespace RWave.System
 
             s_instance = this;
             _isValid = true;
-            if (!_autoInitializeOnAwake) { return; }
+            if (!_autoInitializeOnStart) { return; }
             Initialize();
         }
 
-        internal void Initialize()
+        public void Initialize()
         {
             if (isInitialized) { return; }
             _audioSourceContainer = this.gameObject.AddComponent<RWaveAudioSourceContainer>();
