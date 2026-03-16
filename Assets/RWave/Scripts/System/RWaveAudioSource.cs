@@ -13,8 +13,22 @@ namespace RWave.System
     /// <summary>
     /// AudioSourceの管理系を纏めたClass
     /// </summary>
-    public class RWaveAudioSource : MonoBehaviour,IRWaveAudioSource
+    public class RWaveAudioSource : MonoBehaviour, IRWaveAudioSource, IRWaveAudioDspTimeProvider
     {
+        /// <summary>
+        /// 現在メインで使用されているAudioSourceの再生開始DSPTime。
+        /// AudioSettings.dspTimeとの差分で精密な再生経過時間を計算可能。
+        /// </summary>
+        public double dspTime => _mainAudioSourcePlayStartDspTime;
+
+        /// <summary>
+        /// 現在メインで使用されているAudioSourceの再生開始からの経過DSP時間（秒）。
+        /// 再生が開始されていない場合は0を返す。
+        /// </summary>
+        public double elapsedDspTime => _mainAudioSourcePlayStartDspTime > 0d
+            ? AudioSettings.dspTime - _mainAudioSourcePlayStartDspTime
+            : 0d;
+
         /// <summary>
         /// 結び付けられているAudioSourceのリスト
         /// </summary>
@@ -29,6 +43,11 @@ namespace RWave.System
         /// 最後に使用したAudioSourceのIndex
         /// </summary>
         private int _lastUseAudioSourceIndex;
+
+        /// <summary>
+        /// メインAudioSourceの再生開始時のDSPTime
+        /// </summary>
+        private double _mainAudioSourcePlayStartDspTime = 0d;
 
         private RWaveAudioSourceSetting _audioSourceSetting;
 
@@ -94,9 +113,10 @@ namespace RWave.System
                 _audioSourceList.Add(audioSource);
                 audioSource.loop = _audioSourceSetting.playBackMode == eRWavePlayBackMode.Loop;
             }
-
+     
             _nextUseAudioSourceIndex = 0;
             _lastUseAudioSourceIndex = _maxSoundCount - 1;
+            _mainAudioSourcePlayStartDspTime = 0d;
 
             // プール初期化
             _playbackDataPool = new RWavePlaybackData[_maxSoundCount];
@@ -237,6 +257,9 @@ namespace RWave.System
             //再生開始
             _audioSourceList[audioSourceIndex].Play();
 
+            // メインAudioSourceをDSPTime提供用に更新
+            _mainAudioSourcePlayStartDspTime = AudioSettings.dspTime;
+
             // プールデータに登録（先に行う）
             RegisterPlaybackData(playbackId, address, audioSourceIndex, originalPlayVolume);
 
@@ -280,6 +303,9 @@ namespace RWave.System
 
             //再生開始
             _audioSourceList[audioSourceIndex].Play();
+
+            // メインAudioSourceをDSPTime提供用に更新（フェードイン開始時に切り替え）
+            _mainAudioSourcePlayStartDspTime = AudioSettings.dspTime;
 
             // プールデータに登録（先に行う）
             RegisterPlaybackData(playbackId, address, audioSourceIndex, originalPlayVolume);
@@ -477,6 +503,7 @@ namespace RWave.System
 
             _nextUseAudioSourceIndex = 0;
             _lastUseAudioSourceIndex = _nextUseAudioSourceIndex - 1;
+            _mainAudioSourcePlayStartDspTime = 0d;
         }
 
         /// <summary>

@@ -277,8 +277,8 @@ namespace RWave.System
         /// <summary>
         /// AudioSourceを取得する
         /// </summary>
-        /// <param name="audioSourceName"></param>
-        /// <returns></returns>
+        /// <param name="audioSourceName">AudioSourceの名前</param>
+        /// <returns>IRWaveAudioSource、存在しない場合はnull</returns>
         public IRWaveAudioSource GetAudioSource(string audioSourceName)
         {
             if (!isInitialized)
@@ -286,8 +286,23 @@ namespace RWave.System
                 RWaveLogUtility.LogAssertion("AudioSourceContainerが初期化されていません。");
                 return null;
             }
-            var audioSource = _audioSourceContainer.GetAudioSource(audioSourceName);
-            return audioSource;
+            return _audioSourceContainer.GetAudioSource(audioSourceName);
+        }
+
+        /// <summary>
+        /// 指定したAudioSourceのDSPTimeプロバイダーを取得する。
+        /// 音楽ゲームやリズム同期での利用を想定する。
+        /// </summary>
+        /// <param name="audioSourceName">AudioSourceの名前</param>
+        /// <returns>IRWaveAudioDspTimeProvider、対応するAudioSourceが存在しないまたは非対応の場合はnull</returns>
+        public IRWaveAudioDspTimeProvider GetDspTimeProvider(string audioSourceName)
+        {
+            if (!isInitialized)
+            {
+                RWaveLogUtility.LogAssertion("AudioSourceContainerが初期化されていません。");
+                return null;
+            }
+            return _audioSourceContainer.GetAudioSource(audioSourceName) as IRWaveAudioDspTimeProvider;
         }
 
         #endregion

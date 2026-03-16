@@ -10,6 +10,36 @@ namespace RWave.Data
     internal class RWavePlaybackData
     {
         /// <summary>
+        /// 再生ID（読み取り専用）
+        /// </summary>
+        public int playbackId => _playbackId;
+
+        /// <summary>
+        /// AudioClipのアドレス（読み取り専用）
+        /// </summary>
+        public string address => _address;
+
+        /// <summary>
+        /// 対応するUnity AudioSource（List内のインデックス）（読み取り専用）
+        /// </summary>
+        public int audioSourceIndex => _audioSourceIndex;
+
+        /// <summary>
+        /// 使用中フラグ（読み取り専用）
+        /// </summary>
+        public bool isActive => _isActive;
+
+        /// <summary>
+        /// 現在のステート状態（読み取り専用）
+        /// </summary>
+        public eRWaveFadeState fadeState => _fadeState;
+
+        /// <summary>
+        /// 再生時に指定された音量（読み取り専用）
+        /// </summary>
+        public float? playVolume => _playVolume;
+
+        /// <summary>
         /// 再生ID（-1は未使用を示す）
         /// </summary>
         private int _playbackId;
@@ -43,36 +73,6 @@ namespace RWave.Data
         /// 再生時に指定された音量（0～100、nullの場合はBaseVolume使用）
         /// </summary>
         private float? _playVolume;
-
-        /// <summary>
-        /// 再生ID（読み取り専用）
-        /// </summary>
-        public int playbackId => _playbackId;
-
-        /// <summary>
-        /// AudioClipのアドレス（読み取り専用）
-        /// </summary>
-        public string address => _address;
-
-        /// <summary>
-        /// 対応するUnity AudioSource（List内のインデックス）（読み取り専用）
-        /// </summary>
-        public int audioSourceIndex => _audioSourceIndex;
-
-        /// <summary>
-        /// 使用中フラグ（読み取り専用）
-        /// </summary>
-        public bool isActive => _isActive;
-
-        /// <summary>
-        /// 現在のステート状態（読み取り専用）
-        /// </summary>
-        public eRWaveFadeState fadeState => _fadeState;
-
-        /// <summary>
-        /// 再生時に指定された音量（読み取り専用）
-        /// </summary>
-        public float? playVolume => _playVolume;
 
         /// <summary>
         /// コンストラクタ
