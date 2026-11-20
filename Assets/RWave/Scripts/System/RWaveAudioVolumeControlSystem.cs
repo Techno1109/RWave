@@ -42,7 +42,9 @@ namespace RWave.System
                 return;
             }
 
-            // 0-100 を -80dB ~ maxDB に変換
+            // 0-100 を対数スケールで -80dB ~ maxDB に変換
+            // dBは対数単位のため、線形変換では中間音量で急激に音が小さくなる
+            // 100%→maxDB、50%→約-6dB（振幅1/2）、10%→-20dB
             float dB;
             if (_volume <= 0.01f)
             {
@@ -50,8 +52,7 @@ namespace RWave.System
             }
             else
             {
-                float normalizedVolume = _volume / 100f;  // 0.0001~1.0
-                dB = MIN_DB + (_maxDB - MIN_DB) * normalizedVolume;
+                dB = Mathf.Max(_maxDB + Mathf.Log10(_volume / 100f) * 20f, MIN_DB);
             }
 
             _audioMixer.SetFloat(_audioMixerGroupName, dB);
@@ -71,14 +72,13 @@ namespace RWave.System
 
             if (_audioMixer.GetFloat(_audioMixerGroupName, out float dB))
             {
-                // -80dB ~ maxDB を 0-100 に変換
+                // -80dB ~ maxDB を対数スケールの逆変換で 0-100 に戻す（SetVolumeと対になる変換）
                 if (dB <= MIN_DB)
                 {
                     return 0f;
                 }
 
-                float normalizedVolume = (dB - MIN_DB) / (_maxDB - MIN_DB);
-                float volume = Mathf.Clamp(normalizedVolume * 100f, 0f, 100f);
+                float volume = Mathf.Clamp(Mathf.Pow(10f, (dB - _maxDB) / 20f) * 100f, 0f, 100f);
 
                 // 内部状態も更新
                 _volume = volume;
