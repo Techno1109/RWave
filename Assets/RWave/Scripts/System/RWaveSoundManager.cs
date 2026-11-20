@@ -213,6 +213,55 @@ namespace RWave.System
         }
 
         /// <summary>
+        /// 再生を実行（再生時音量・フェードイン時間指定あり）
+        /// </summary>
+        /// <param name="audioAddress">再生するAudioのAddress</param>
+        /// <param name="audioSourceName">AudioSourceの名前</param>
+        /// <param name="playVolume">再生時の音量（0～100、nullの場合はBaseVolumeを使用）</param>
+        /// <param name="fadeInSeconds">フェードイン時間（秒）。nullの場合は設定のAttackを使用。CrossFadeが有効な場合は前の音のフェードアウト時間にも使用する</param>
+        /// <returns>再生制御用ハンドラー</returns>
+        public RWaveAudioHandler Play(string audioAddress, string audioSourceName, float? playVolume, float? fadeInSeconds)
+        {
+            if (!isInitialized)
+            {
+                RWaveLogUtility.LogAssertion("AudioSourceContainerが初期化されていません。");
+                return RWaveAudioHandler.Invalid;
+            }
+            var audioClip = _audioResourceContainer.GetAudioClip(audioAddress);
+            if (audioClip == null)
+            {
+                RWaveLogUtility.LogAssertion($"AudioClipが読み込まれていません。Address:{audioAddress}");
+                return RWaveAudioHandler.Invalid;
+            }
+            return _audioSourceContainer.Play(audioClip, audioSourceName, audioAddress, playVolume, fadeInSeconds);
+        }
+
+        /// <summary>
+        /// 再生を実行（再生時音量・フェードイン時間指定あり）
+        /// </summary>
+        /// <param name="audioAddress">再生するAudioのAddress</param>
+        /// <param name="audioSourceName">AudioSourceの名前</param>
+        /// <param name="audioResourceGroup">AudioResourceのグループ名</param>
+        /// <param name="playVolume">再生時の音量（0～100、nullの場合はBaseVolumeを使用）</param>
+        /// <param name="fadeInSeconds">フェードイン時間（秒）。nullの場合は設定のAttackを使用。CrossFadeが有効な場合は前の音のフェードアウト時間にも使用する</param>
+        /// <returns>再生制御用ハンドラー</returns>
+        public RWaveAudioHandler Play(string audioAddress, string audioSourceName, string audioResourceGroup, float? playVolume, float? fadeInSeconds)
+        {
+            if (!isInitialized)
+            {
+                RWaveLogUtility.LogAssertion("AudioSourceContainerが初期化されていません。");
+                return RWaveAudioHandler.Invalid;
+            }
+            var audioClip = _audioResourceContainer.GetAudioClip(audioAddress, audioResourceGroup);
+            if (audioClip == null)
+            {
+                RWaveLogUtility.LogAssertion($"AudioClipが読み込まれていません。Address:{audioAddress}");
+                return RWaveAudioHandler.Invalid;
+            }
+            return _audioSourceContainer.Play(audioClip, audioSourceName, audioAddress, playVolume, fadeInSeconds);
+        }
+
+        /// <summary>
         /// 指定したAudioSourceの再生を止める
         /// </summary>
         /// <param name="audioSourceName"></param>
@@ -224,6 +273,21 @@ namespace RWave.System
                 return;
             }
             _audioSourceContainer.Stop(audioSourceName);
+        }
+
+        /// <summary>
+        /// 指定したAudioSourceの再生を止める（フェードアウト時間指定あり）
+        /// </summary>
+        /// <param name="audioSourceName">AudioSourceの名前</param>
+        /// <param name="fadeOutSeconds">フェードアウト時間（秒）。nullの場合は設定のReleaseを使用</param>
+        public void Stop(string audioSourceName, float? fadeOutSeconds)
+        {
+            if (!isInitialized)
+            {
+                RWaveLogUtility.LogAssertion("AudioSourceContainerが初期化されていません。");
+                return;
+            }
+            _audioSourceContainer.Stop(audioSourceName, fadeOutSeconds);
         }
 
         /// <summary>
@@ -242,6 +306,22 @@ namespace RWave.System
         }
 
         /// <summary>
+        /// ハンドラー指定で再生を停止する（フェードアウト時間指定あり）
+        /// </summary>
+        /// <param name="handler">停止する再生のハンドラー</param>
+        /// <param name="audioSourceName">AudioSourceの名前</param>
+        /// <param name="fadeOutSeconds">フェードアウト時間（秒）。nullの場合は設定のReleaseを使用</param>
+        public void Stop(RWaveAudioHandler handler, string audioSourceName, float? fadeOutSeconds)
+        {
+            if (!isInitialized)
+            {
+                RWaveLogUtility.LogAssertion("AudioSourceContainerが初期化されていません。");
+                return;
+            }
+            _audioSourceContainer.Stop(handler, audioSourceName, fadeOutSeconds);
+        }
+
+        /// <summary>
         /// アドレス指定で該当する全再生を停止する
         /// </summary>
         /// <param name="audioAddress">AudioClipのアドレス</param>
@@ -254,6 +334,22 @@ namespace RWave.System
                 return;
             }
             _audioSourceContainer.Stop(audioAddress, audioSourceName);
+        }
+
+        /// <summary>
+        /// アドレス指定で該当する全再生を停止する（フェードアウト時間指定あり）
+        /// </summary>
+        /// <param name="audioAddress">AudioClipのアドレス</param>
+        /// <param name="audioSourceName">AudioSourceの名前</param>
+        /// <param name="fadeOutSeconds">フェードアウト時間（秒）。nullの場合は設定のReleaseを使用</param>
+        public void Stop(string audioAddress, string audioSourceName, float? fadeOutSeconds)
+        {
+            if (!isInitialized)
+            {
+                RWaveLogUtility.LogAssertion("AudioSourceContainerが初期化されていません。");
+                return;
+            }
+            _audioSourceContainer.Stop(audioAddress, audioSourceName, fadeOutSeconds);
         }
 
         /// <summary>
@@ -351,6 +447,72 @@ namespace RWave.System
 
             RWaveLogUtility.LogAssertion($"指定したAudioMixerGroupは存在しません。AudioMixerGroupName:{audioMixerGroupName}");
             return 0f;
+        }
+
+        /// <summary>
+        /// 指定したAudioMixerGroupの音量へ一時的に掛ける倍率を設定する。
+        /// SetAudioMixerGroupVolumeで設定した音量そのものは変えないため、倍率を1に戻せば元の音量に戻る。
+        /// 会話中だけBGMを下げる等、設定音量とは別に一時的な音量調整を行いたい場合に使用する
+        /// </summary>
+        /// <param name="audioMixerGroupName">AudioMixerGroupの名前</param>
+        /// <param name="volumeScale">音量倍率（0～1）</param>
+        /// <param name="fadeSeconds">倍率を変化させる時間（秒）。0以下の場合は即座に反映する</param>
+        public void SetAudioMixerGroupVolumeScale(string audioMixerGroupName, float volumeScale, float fadeSeconds = 0f)
+        {
+            if (!isInitialized)
+            {
+                RWaveLogUtility.LogAssertion("RWaveSoundManagerが初期化されていません。");
+                return;
+            }
+
+            if (_audioMixerGroupVolumeControllers.TryGetValue(audioMixerGroupName, out var controller))
+            {
+                controller.SetVolumeScale(volumeScale, fadeSeconds);
+                return;
+            }
+
+            RWaveLogUtility.LogAssertion($"指定したAudioMixerGroupは存在しません。AudioMixerGroupName:{audioMixerGroupName}");
+        }
+
+        /// <summary>
+        /// 指定したAudioMixerGroupの現在の音量倍率を取得する
+        /// </summary>
+        /// <param name="audioMixerGroupName">AudioMixerGroupの名前</param>
+        /// <returns>音量倍率（0～1）、存在しない場合は1</returns>
+        public float GetAudioMixerGroupVolumeScale(string audioMixerGroupName)
+        {
+            if (!isInitialized)
+            {
+                RWaveLogUtility.LogAssertion("RWaveSoundManagerが初期化されていません。");
+                return 1f;
+            }
+
+            if (_audioMixerGroupVolumeControllers.TryGetValue(audioMixerGroupName, out var controller))
+            {
+                return controller.currentVolumeScale;
+            }
+
+            RWaveLogUtility.LogAssertion($"指定したAudioMixerGroupは存在しません。AudioMixerGroupName:{audioMixerGroupName}");
+            return 1f;
+        }
+
+        /// <summary>
+        /// すべてのAudioMixerGroup（Masterを含む）の音量倍率を1に戻す。
+        /// SetAudioMixerGroupVolumeScaleで下げた音量の戻し忘れを、まとめて解消したい場合に使用する
+        /// </summary>
+        /// <param name="fadeSeconds">倍率を変化させる時間（秒）。0以下の場合は即座に反映する</param>
+        public void ResetAllAudioMixerGroupVolumeScales(float fadeSeconds = 0f)
+        {
+            if (!isInitialized)
+            {
+                RWaveLogUtility.LogAssertion("RWaveSoundManagerが初期化されていません。");
+                return;
+            }
+
+            foreach (var controller in _audioMixerGroupVolumeControllers.Values)
+            {
+                controller.SetVolumeScale(1f, fadeSeconds);
+            }
         }
 
         /// <summary>

@@ -147,8 +147,14 @@ RWaveSoundManager.Instance.Play("audio_address", "AudioSourceName", "AudioResour
 // 再生時音量を指定して再生
 RWaveSoundManager.Instance.Play("audio_address", "AudioSourceName", playVolume: 50f);
 
+// フェードイン時間（秒）を指定して再生（設定のAttackの代わりに使用。CrossFadeが有効な場合は前の音のフェードアウト時間にも使用）
+RWaveSoundManager.Instance.Play("audio_address", "AudioSourceName", playVolume: null, fadeInSeconds: 2.0f);
+
 // 停止（フェードアウト付き）
 RWaveSoundManager.Instance.Stop("AudioSourceName");
+
+// フェードアウト時間（秒）を指定して停止（設定のReleaseの代わりに使用）
+RWaveSoundManager.Instance.Stop("AudioSourceName", fadeOutSeconds: 3.0f);
 
 // 即座に停止
 RWaveSoundManager.Instance.ForceStop("AudioSourceName");
@@ -183,11 +189,30 @@ RWaveSoundManager.Instance.SetAudioMixerGroupVolume("AudioMixerGroupName", 80f);
 // AudioSource の音量を設定（0～100）
 RWaveSoundManager.Instance.SetAudioSourceVolume("AudioSourceName", 70f);
 
-// AudioMixerGroupの現在の音量を取得（AudioMixerから実際の値を取得し、0～100に変換）
+// AudioMixerGroupの現在の音量を取得（0～100。下記の一時的な音量倍率は含まない）
 float volume = RWaveSoundManager.Instance.GetAudioMixerGroupVolume("AudioMixerGroupName");
 
 // AudioSourceの現在の音量を取得
 float volume = RWaveSoundManager.Instance.GetAudioSourceVolume("AudioSourceName");
+```
+
+#### 一時的な音量倍率
+
+会話中だけBGMを下げる等、設定した音量とは別に一時的な音量調整を行いたい場合は、AudioMixerGroup単位の音量倍率を使用します。
+`SetAudioMixerGroupVolume`で設定した音量そのものは変わらないため、倍率を1に戻せば元の音量に戻ります。
+
+```csharp
+// AudioMixerGroupの音量を1秒かけて半分にする（倍率は0～1）
+RWaveSoundManager.Instance.SetAudioMixerGroupVolumeScale("AudioMixerGroupName", 0.5f, fadeSeconds: 1.0f);
+
+// 元の音量に戻す
+RWaveSoundManager.Instance.SetAudioMixerGroupVolumeScale("AudioMixerGroupName", 1f, fadeSeconds: 1.0f);
+
+// 現在の音量倍率を取得
+float volumeScale = RWaveSoundManager.Instance.GetAudioMixerGroupVolumeScale("AudioMixerGroupName");
+
+// すべてのAudioMixerGroup（Masterを含む）の音量倍率を1に戻す（戻し忘れの解消用）
+RWaveSoundManager.Instance.ResetAllAudioMixerGroupVolumeScales(fadeSeconds: 1.0f);
 ```
 
 **注意**: RWaveSettingまたはRWaveAudioMixerGroupSettingでExposed Parameter Nameが空白の場合、AudioMixerへの反映は無効化され、内部状態のみが管理されます。
@@ -421,8 +446,14 @@ RWaveSoundManager.Instance.Play("audio_address", "AudioSourceName", "AudioResour
 // Play with specified volume
 RWaveSoundManager.Instance.Play("audio_address", "AudioSourceName", playVolume: 50f);
 
+// Play with a specified fade-in time in seconds (used instead of the Attack setting; with CrossFade enabled, also used as the fade-out time of the previous audio)
+RWaveSoundManager.Instance.Play("audio_address", "AudioSourceName", playVolume: null, fadeInSeconds: 2.0f);
+
 // Stop (with fade-out)
 RWaveSoundManager.Instance.Stop("AudioSourceName");
+
+// Stop with a specified fade-out time in seconds (used instead of the Release setting)
+RWaveSoundManager.Instance.Stop("AudioSourceName", fadeOutSeconds: 3.0f);
 
 // Force stop immediately
 RWaveSoundManager.Instance.ForceStop("AudioSourceName");
@@ -457,11 +488,30 @@ RWaveSoundManager.Instance.SetAudioMixerGroupVolume("AudioMixerGroupName", 80f);
 // Set AudioSource volume (0-100)
 RWaveSoundManager.Instance.SetAudioSourceVolume("AudioSourceName", 70f);
 
-// Get current AudioMixerGroup volume (retrieves actual value from AudioMixer and converts to 0-100)
+// Get current AudioMixerGroup volume (0-100; does not include the temporary volume scale described below)
 float volume = RWaveSoundManager.Instance.GetAudioMixerGroupVolume("AudioMixerGroupName");
 
 // Get current AudioSource volume
 float volume = RWaveSoundManager.Instance.GetAudioSourceVolume("AudioSourceName");
+```
+
+#### Temporary Volume Scale
+
+To adjust the volume temporarily without touching the configured volume (e.g. lowering the BGM during a conversation), use the per-AudioMixerGroup volume scale.
+The volume set with `SetAudioMixerGroupVolume` itself is not changed, so setting the scale back to 1 restores the original volume.
+
+```csharp
+// Halve the AudioMixerGroup volume over 1 second (scale is 0-1)
+RWaveSoundManager.Instance.SetAudioMixerGroupVolumeScale("AudioMixerGroupName", 0.5f, fadeSeconds: 1.0f);
+
+// Restore the original volume
+RWaveSoundManager.Instance.SetAudioMixerGroupVolumeScale("AudioMixerGroupName", 1f, fadeSeconds: 1.0f);
+
+// Get the current volume scale
+float volumeScale = RWaveSoundManager.Instance.GetAudioMixerGroupVolumeScale("AudioMixerGroupName");
+
+// Reset the volume scale of every AudioMixerGroup (including Master) to 1 (to clear scales that were left lowered)
+RWaveSoundManager.Instance.ResetAllAudioMixerGroupVolumeScales(fadeSeconds: 1.0f);
 ```
 
 **Note**: If the Exposed Parameter Name is left blank in RWaveSetting or RWaveAudioMixerGroupSetting, AudioMixer integration is disabled and only internal state is managed.

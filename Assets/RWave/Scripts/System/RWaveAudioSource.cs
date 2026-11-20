@@ -169,6 +169,19 @@ namespace RWave.System
         /// <returns>再生制御用ハンドラー</returns>
         public RWaveAudioHandler Play(AudioClip audioClip, string address, float? playVolume)
         {
+            return Play(audioClip, address, playVolume, null);
+        }
+
+        /// <summary>
+        /// 指定したAudioClipを再生する（アドレス・再生時音量・フェードイン時間指定あり）
+        /// </summary>
+        /// <param name="audioClip">再生するAudioClip</param>
+        /// <param name="address">AudioClipのアドレス</param>
+        /// <param name="playVolume">再生時の音量（0～100、nullの場合はBaseVolumeを使用）</param>
+        /// <param name="fadeInSeconds">フェードイン時間（秒）。nullの場合は設定のAttackを使用。CrossFadeが有効な場合は前の音のフェードアウト時間にも使用する</param>
+        /// <returns>再生制御用ハンドラー</returns>
+        public RWaveAudioHandler Play(AudioClip audioClip, string address, float? playVolume, float? fadeInSeconds)
+        {
             if (audioClip == null)
             {
                 RWaveLogUtility.LogAssertion("AudioClipがNullです。");
@@ -198,11 +211,11 @@ namespace RWave.System
             // CrossFadeが有効かどうかで処理を分岐
             if (_crossFadeSetting.isCrossFadeActive)
             {
-                PlayWithCrossFade(audioClip, currentPlaybackId, address, effectivePlayVolume, clampedPlayVolume);
+                PlayWithCrossFade(audioClip, currentPlaybackId, address, effectivePlayVolume, clampedPlayVolume, fadeInSeconds);
             }
             else
             {
-                PlayNormal(audioClip, currentPlaybackId, address, effectivePlayVolume, clampedPlayVolume);
+                PlayNormal(audioClip, currentPlaybackId, address, effectivePlayVolume, clampedPlayVolume, fadeInSeconds);
             }
 
             // ハンドラーを返す
@@ -240,13 +253,18 @@ namespace RWave.System
         /// <param name="address">AudioClipのアドレス</param>
         /// <param name="playVolume">再生時の音量（0～100）</param>
         /// <param name="originalPlayVolume">元の再生時音量（null許容型、nullの場合はBaseVolume使用）</param>
-        private void PlayNormal(AudioClip audioClip, int playbackId, string address, float playVolume, float? originalPlayVolume)
+        /// <param name="fadeInSeconds">フェードイン時間（秒）。nullの場合は設定のAttackを使用</param>
+        private void PlayNormal(AudioClip audioClip, int playbackId, string address, float playVolume, float? originalPlayVolume, float? fadeInSeconds)
         {
             var audioSourceIndex = _nextUseAudioSourceIndex;
-            var isFadeIn = 0f < _audioSourceSetting.attackTimeInSeconds;
+            var attackSeconds = fadeInSeconds ?? _audioSourceSetting.attackTimeInSeconds;
+            var isFadeIn = 0f < attackSeconds;
 
             // 再生時音量を正規化（BaseVolumeでキャップしない）
             var playVolumeNormalized = playVolume / 100f;
+
+            // これから使うAudioSourceに残っている再生データを破棄する
+            DiscardPlaybackDataByAudioSourceIndex(audioSourceIndex);
 
             //FadeInする場合は最初の音量を0にする、しない場合は再生時音量を設定
             _audioSourceList[audioSourceIndex].volume = isFadeIn ? 0f : playVolumeNormalized;
@@ -268,7 +286,7 @@ namespace RWave.System
             {
                 // PlaybackDataから個別のCancellationTokenを取得
                 var cancellationToken = GetPlaybackDataCancellationToken(playbackId);
-                _ = DoFade(_audioSourceList[audioSourceIndex], playVolumeNormalized, _audioSourceSetting.attackTimeInSeconds, cancellationToken, playbackId, eRWaveFadeState.Attack);
+                _ = DoFade(_audioSourceList[audioSourceIndex], playVolumeNormalized, attackSeconds, cancellationToken, playbackId, eRWaveFadeState.Attack);
             }
 
             _lastUseAudioSourceIndex = _nextUseAudioSourceIndex;
@@ -287,16 +305,21 @@ namespace RWave.System
         /// <param name="address">AudioClipのアドレス</param>
         /// <param name="playVolume">再生時の音量（0～100）</param>
         /// <param name="originalPlayVolume">元の再生時音量（null許容型、nullの場合はBaseVolume使用）</param>
-        private void PlayWithCrossFade(AudioClip audioClip, int playbackId, string address, float playVolume, float? originalPlayVolume)
+        /// <param name="fadeInSeconds">クロスフェード時間（秒）。nullの場合は設定のCrossFadeのAttack/Releaseを使用</param>
+        private void PlayWithCrossFade(AudioClip audioClip, int playbackId, string address, float playVolume, float? originalPlayVolume, float? fadeInSeconds)
         {
             var audioSourceIndex = _nextUseAudioSourceIndex;
-            var crossFadeDuration = _crossFadeSetting.attackTimeInSeconds;
+            var attackSeconds = fadeInSeconds ?? _crossFadeSetting.attackTimeInSeconds;
+            var releaseSeconds = fadeInSeconds ?? _crossFadeSetting.releaseTimeInSeconds;
 
             // 再生時音量を正規化（BaseVolumeでキャップしない）
             var playVolumeNormalized = playVolume / 100f;
 
-            //クロスフェードする場合は最初の音量を0にする、しない場合は再生時音量を設定
-            _audioSourceList[audioSourceIndex].volume = 0f < crossFadeDuration ? 0f : playVolumeNormalized;
+            // これから使うAudioSourceに残っている再生データを破棄する
+            DiscardPlaybackDataByAudioSourceIndex(audioSourceIndex);
+
+            //フェードインする場合は最初の音量を0にする、しない場合は再生時音量を設定
+            _audioSourceList[audioSourceIndex].volume = 0f < attackSeconds ? 0f : playVolumeNormalized;
 
             //再生に関わる設定を反映
             _audioSourceList[audioSourceIndex].clip = audioClip;
@@ -310,25 +333,18 @@ namespace RWave.System
             // プールデータに登録（先に行う）
             RegisterPlaybackData(playbackId, address, audioSourceIndex, originalPlayVolume);
 
-            //クロスフェードする場合、実行
-            if (0f < crossFadeDuration)
+            // 古い音のフェードアウト処理（Release時間が0以下の場合は即座に停止する）
+            var previousPlaybackData = FindActivePlaybackDataByAudioSourceIndex(_lastUseAudioSourceIndex);
+            if (previousPlaybackData != null)
             {
-                // 古い音のフェードアウト処理
-                if (_lastUseAudioSourceIndex >= 0)
-                {
-                    var fadeOutAudioSource = _audioSourceList[_lastUseAudioSourceIndex];
-                    // 前の再生のplaybackIdを取得
-                    int previousPlaybackId = GetPlaybackIdByAudioSourceIndex(_lastUseAudioSourceIndex);
-                    if (previousPlaybackId >= 0)
-                    {
-                        var previousToken = GetPlaybackDataCancellationToken(previousPlaybackId);
-                        _ = ExecuteCrossFadeOut(fadeOutAudioSource, _crossFadeSetting.releaseTimeInSeconds, previousToken, previousPlaybackId);
-                    }
-                }
+                StartRelease(previousPlaybackData, releaseSeconds);
+            }
 
-                // 新しい音のフェードイン処理（目標音量として再生時音量を使用）
+            // 新しい音のフェードイン処理（目標音量として再生時音量を使用）
+            if (0f < attackSeconds)
+            {
                 var newToken = GetPlaybackDataCancellationToken(playbackId);
-                _ = DoFade(_audioSourceList[audioSourceIndex], playVolumeNormalized, crossFadeDuration, newToken, playbackId, eRWaveFadeState.Attack);
+                _ = DoFade(_audioSourceList[audioSourceIndex], playVolumeNormalized, attackSeconds, newToken, playbackId, eRWaveFadeState.Attack);
             }
 
             _lastUseAudioSourceIndex = _nextUseAudioSourceIndex;
@@ -344,6 +360,17 @@ namespace RWave.System
         /// </summary>
         public void Stop()
         {
+            Stop((float?)null);
+        }
+
+        /// <summary>
+        /// 再生されているAudioSourceをすべて停止する（フェードアウト時間指定あり）
+        /// </summary>
+        /// <param name="fadeOutSeconds">フェードアウト時間（秒）。nullの場合は設定のReleaseを使用</param>
+        public void Stop(float? fadeOutSeconds)
+        {
+            var releaseSeconds = fadeOutSeconds ?? _audioSourceSetting.releaseTimeInSeconds;
+
             // 全てのPlaybackDataを処理
             for (int i = 0; i < _playbackDataPool.Length; i++)
             {
@@ -351,21 +378,13 @@ namespace RWave.System
 
                 if (playbackData.isActive)
                 {
-                    // Attack中の場合、Releaseフェードに切り替え
-                    if (playbackData.IsInAttackState())
-                    {
-                        SwitchToReleaseFade(playbackData);
-                    }
-                    else
-                    {
-                        // 通常の停止処理
-                        StopAudioSourceByIndex(playbackData.audioSourceIndex, playbackData.playbackId);
-                    }
+                    StartRelease(playbackData, releaseSeconds);
                 }
             }
 
-            _nextUseAudioSourceIndex = 0;
-            _lastUseAudioSourceIndex = _nextUseAudioSourceIndex - 1;
+            // 全て停止したため、次の再生でクロスフェードアウトさせる対象は無い。
+            // フェードアウト中のAudioSourceを次の再生で上書きしないよう、次に使うIndexは巻き戻さない
+            _lastUseAudioSourceIndex = -1;
         }
 
         /// <summary>
@@ -373,6 +392,16 @@ namespace RWave.System
         /// </summary>
         /// <param name="handler">停止する再生のハンドラー</param>
         public void Stop(RWaveAudioHandler handler)
+        {
+            Stop(handler, null);
+        }
+
+        /// <summary>
+        /// ハンドラー指定で再生を停止する（フェードアウト時間指定あり）
+        /// </summary>
+        /// <param name="handler">停止する再生のハンドラー</param>
+        /// <param name="fadeOutSeconds">フェードアウト時間（秒）。nullの場合は設定のReleaseを使用</param>
+        public void Stop(RWaveAudioHandler handler, float? fadeOutSeconds)
         {
             if (!handler.IsValid())
             {
@@ -387,19 +416,8 @@ namespace RWave.System
 
                 if (playbackData.IsActiveWithId(handler.playbackId))
                 {
-                    // Attack中の場合、Releaseフェードに切り替え
-                    if (playbackData.IsInAttackState())
-                    {
-                        SwitchToReleaseFade(playbackData);
-                    }
-                    else
-                    {
-                        // 通常の停止処理
-                        StopAudioSourceByIndex(playbackData.audioSourceIndex, playbackData.playbackId);
-                    }
-
-                    // playbackData.Reset()を削除
                     // Releaseフェード中もPlaybackDataを維持し、フェード完了後にResetする
+                    StartRelease(playbackData, fadeOutSeconds ?? _audioSourceSetting.releaseTimeInSeconds);
                     return;
                 }
             }
@@ -414,12 +432,23 @@ namespace RWave.System
         /// <param name="address">AudioClipのアドレス</param>
         public void Stop(string address)
         {
+            Stop(address, null);
+        }
+
+        /// <summary>
+        /// アドレス指定で該当する全再生を停止する（フェードアウト時間指定あり）
+        /// </summary>
+        /// <param name="address">AudioClipのアドレス</param>
+        /// <param name="fadeOutSeconds">フェードアウト時間（秒）。nullの場合は設定のReleaseを使用</param>
+        public void Stop(string address, float? fadeOutSeconds)
+        {
             if (string.IsNullOrEmpty(address))
             {
                 RWaveLogUtility.LogWarning("空のアドレスが指定されました。");
                 return;
             }
 
+            var releaseSeconds = fadeOutSeconds ?? _audioSourceSetting.releaseTimeInSeconds;
             bool foundAny = false;
 
             for (int i = _playbackDataPool.Length - 1; i >= 0; i--)
@@ -428,19 +457,8 @@ namespace RWave.System
 
                 if (playbackData.IsActiveWithAddress(address))
                 {
-                    // Attack中の場合、Releaseフェードに切り替え
-                    if (playbackData.IsInAttackState())
-                    {
-                        SwitchToReleaseFade(playbackData);
-                    }
-                    else
-                    {
-                        // 通常の停止処理
-                        StopAudioSourceByIndex(playbackData.audioSourceIndex, playbackData.playbackId);
-                    }
-
-                    // playbackData.Reset()を削除
                     // Releaseフェード完了後にResetされる
+                    StartRelease(playbackData, releaseSeconds);
                     foundAny = true;
                 }
             }
@@ -448,31 +466,6 @@ namespace RWave.System
             if (!foundAny)
             {
                 RWaveLogUtility.LogWarning($"指定されたアドレス '{address}' の再生が見つかりません。");
-            }
-        }
-
-        /// <summary>
-        /// AudioSourceインデックス指定で停止
-        /// </summary>
-        /// <param name="audioSourceIndex">AudioSourceのインデックス</param>
-        /// <param name="playbackId">再生ID</param>
-        private void StopAudioSourceByIndex(int audioSourceIndex, int playbackId)
-        {
-            if (audioSourceIndex < 0 || audioSourceIndex >= _audioSourceList.Count)
-            {
-                return;
-            }
-
-            var audioSource = _audioSourceList[audioSourceIndex];
-
-            if (_audioSourceSetting.releaseTimeInSeconds <= 0f)
-            {
-                audioSource.Stop();
-            }
-            else
-            {
-                var token = GetPlaybackDataCancellationToken(playbackId);
-                _ = ExecuteReleaseStop(audioSource, _audioSourceSetting.releaseTimeInSeconds, token, playbackId);
             }
         }
 
@@ -799,25 +792,6 @@ namespace RWave.System
         }
 
         /// <summary>
-        /// クロスフェード処理：指定したAudioSourceをフェードアウト後に停止する
-        /// </summary>
-        /// <param name="audioSource">対象のAudioSource</param>
-        /// <param name="duration">フェード時間</param>
-        /// <param name="token">キャンセルトークン</param>
-        /// <param name="playbackId">再生ID</param>
-        private async Awaitable ExecuteCrossFadeOut(AudioSource audioSource, float duration, CancellationToken token, int playbackId)
-        {
-            await DoFade(audioSource, 0f, duration, token, playbackId, eRWaveFadeState.Release);
-            if (!token.IsCancellationRequested && audioSource != null)
-            {
-                audioSource.Stop();
-
-                // Releaseフェード完了後にPlaybackDataをReset
-                ResetPlaybackDataByPlaybackId(playbackId);
-            }
-        }
-
-        /// <summary>
         /// Release処理：指定したAudioSourceをフェードアウト後に停止する
         /// </summary>
         /// <param name="audioSource">対象のAudioSource</param>
@@ -855,10 +829,12 @@ namespace RWave.System
         }
 
         /// <summary>
-        /// Attack中のフェードをReleaseフェードに切り替える
+        /// 指定した再生をReleaseフェードで停止する。
+        /// 進行中のフェード（Attack・音量変更・先行のRelease）は打ち切り、現在の音量から下げ始める
         /// </summary>
         /// <param name="playbackData">対象のPlaybackData</param>
-        private void SwitchToReleaseFade(RWavePlaybackData playbackData)
+        /// <param name="releaseSeconds">Release時間（秒）。0以下の場合は即座に停止する</param>
+        private void StartRelease(RWavePlaybackData playbackData, float releaseSeconds)
         {
             if (playbackData.audioSourceIndex < 0 || playbackData.audioSourceIndex >= _audioSourceList.Count)
             {
@@ -867,23 +843,37 @@ namespace RWave.System
 
             var audioSource = _audioSourceList[playbackData.audioSourceIndex];
 
-            // 既存のAttackフェードをキャンセル
+            // 進行中のフェードをキャンセル
             playbackData.CancelFade();
 
-            // 新しいCancellationTokenを取得
-            var token = playbackData.GetOrCreateCancellationToken();
-
-            // 現在の音量からReleaseフェードを開始
-            if (_audioSourceSetting.releaseTimeInSeconds > 0f)
+            // Release時間が0以下の場合は即座に停止
+            if (releaseSeconds <= 0f)
             {
-                _ = ExecuteReleaseStop(audioSource, _audioSourceSetting.releaseTimeInSeconds,
-                    token, playbackData.playbackId);
-            }
-            else
-            {
-                // Release時間が0の場合は即座に停止
                 audioSource.Stop();
                 playbackData.Reset();
+                return;
+            }
+
+            // 新しいCancellationTokenを取得し、現在の音量からReleaseフェードを開始
+            var token = playbackData.GetOrCreateCancellationToken();
+            _ = ExecuteReleaseStop(audioSource, releaseSeconds, token, playbackData.playbackId);
+        }
+
+        /// <summary>
+        /// 指定したAudioSourceを使用している再生データを破棄する。
+        /// 破棄せずに同じAudioSourceで次の音を再生すると、残っていたフェードが新しい音の音量を書き換えたり停止させたりしてしまう
+        /// </summary>
+        /// <param name="audioSourceIndex">これから再生に使うAudioSourceのインデックス</param>
+        private void DiscardPlaybackDataByAudioSourceIndex(int audioSourceIndex)
+        {
+            for (int i = 0; i < _playbackDataPool.Length; i++)
+            {
+                var playbackData = _playbackDataPool[i];
+                if (playbackData.isActive && playbackData.audioSourceIndex == audioSourceIndex)
+                {
+                    // Reset内でフェードもキャンセルされる
+                    playbackData.Reset();
+                }
             }
         }
 
@@ -976,20 +966,20 @@ namespace RWave.System
         }
 
         /// <summary>
-        /// AudioSourceIndexから対応するplaybackIdを取得
+        /// AudioSourceIndexから対応するアクティブなPlaybackDataを取得
         /// </summary>
         /// <param name="audioSourceIndex">AudioSourceのインデックス</param>
-        /// <returns>playbackId（見つからない場合は-1）</returns>
-        private int GetPlaybackIdByAudioSourceIndex(int audioSourceIndex)
+        /// <returns>PlaybackData（見つからない場合はnull）</returns>
+        private RWavePlaybackData FindActivePlaybackDataByAudioSourceIndex(int audioSourceIndex)
         {
             for (int i = 0; i < _playbackDataPool.Length; i++)
             {
                 if (_playbackDataPool[i].isActive && _playbackDataPool[i].audioSourceIndex == audioSourceIndex)
                 {
-                    return _playbackDataPool[i].playbackId;
+                    return _playbackDataPool[i];
                 }
             }
-            return -1;
+            return null;
         }
 
         /// <summary>

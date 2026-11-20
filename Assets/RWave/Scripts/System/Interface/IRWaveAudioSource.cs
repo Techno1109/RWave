@@ -52,9 +52,25 @@ namespace RWave.System.Interface
         public RWaveAudioHandler Play(AudioClip audioClip, string address, float? playVolume);
 
         /// <summary>
+        /// 再生を実行（アドレス・再生時音量・フェードイン時間指定あり）
+        /// </summary>
+        /// <param name="audioClip">再生するAudioClip</param>
+        /// <param name="address">AudioClipのアドレス</param>
+        /// <param name="playVolume">再生時の音量（0～100、nullの場合はBaseVolumeを使用）</param>
+        /// <param name="fadeInSeconds">フェードイン時間（秒）。nullの場合は設定のAttackを使用。CrossFadeが有効な場合は前の音のフェードアウト時間にも使用する</param>
+        /// <returns>再生制御用ハンドラー</returns>
+        public RWaveAudioHandler Play(AudioClip audioClip, string address, float? playVolume, float? fadeInSeconds);
+
+        /// <summary>
         /// 現在再生中の音をすべてFadeOutさせて停止する。
         /// </summary>
         public void Stop();
+
+        /// <summary>
+        /// 現在再生中の音をすべてFadeOutさせて停止する（フェードアウト時間指定あり）
+        /// </summary>
+        /// <param name="fadeOutSeconds">フェードアウト時間（秒）。nullの場合は設定のReleaseを使用</param>
+        public void Stop(float? fadeOutSeconds);
 
         /// <summary>
         /// ハンドラー指定で再生を停止する
@@ -63,10 +79,24 @@ namespace RWave.System.Interface
         public void Stop(RWaveAudioHandler handler);
 
         /// <summary>
+        /// ハンドラー指定で再生を停止する（フェードアウト時間指定あり）
+        /// </summary>
+        /// <param name="handler">停止する再生のハンドラー</param>
+        /// <param name="fadeOutSeconds">フェードアウト時間（秒）。nullの場合は設定のReleaseを使用</param>
+        public void Stop(RWaveAudioHandler handler, float? fadeOutSeconds);
+
+        /// <summary>
         /// アドレス指定で該当する全再生を停止する
         /// </summary>
         /// <param name="address">AudioClipのアドレス</param>
         public void Stop(string address);
+
+        /// <summary>
+        /// アドレス指定で該当する全再生を停止する（フェードアウト時間指定あり）
+        /// </summary>
+        /// <param name="address">AudioClipのアドレス</param>
+        /// <param name="fadeOutSeconds">フェードアウト時間（秒）。nullの場合は設定のReleaseを使用</param>
+        public void Stop(string address, float? fadeOutSeconds);
 
         /// <summary>
         /// 現在再生中の音をすべて即座に停止する。

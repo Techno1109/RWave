@@ -93,6 +93,20 @@ namespace RWave.System
         /// <returns>再生制御用ハンドラー</returns>
         public RWaveAudioHandler Play(AudioClip audioClip, string audioSourceName, string address, float? playVolume)
         {
+            return Play(audioClip, audioSourceName, address, playVolume, null);
+        }
+
+        /// <summary>
+        /// 再生を実行（アドレス・再生時音量・フェードイン時間指定あり）
+        /// </summary>
+        /// <param name="audioClip">再生するAudioClip</param>
+        /// <param name="audioSourceName">AudioSourceの名前</param>
+        /// <param name="address">AudioClipのアドレス</param>
+        /// <param name="playVolume">再生時の音量（0～100、nullの場合はBaseVolumeを使用）</param>
+        /// <param name="fadeInSeconds">フェードイン時間（秒）。nullの場合は設定のAttackを使用</param>
+        /// <returns>再生制御用ハンドラー</returns>
+        public RWaveAudioHandler Play(AudioClip audioClip, string audioSourceName, string address, float? playVolume, float? fadeInSeconds)
+        {
             if (!isInitialized)
             {
                 RWaveLogUtility.LogAssertion("AudioSourceContainerが初期化されていません。");
@@ -105,7 +119,7 @@ namespace RWave.System
                 return RWaveAudioHandler.Invalid;
             }
 
-            return soundPlayer.Play(audioClip, address, playVolume);
+            return soundPlayer.Play(audioClip, address, playVolume, fadeInSeconds);
         }
 
         /// <summary>
@@ -114,6 +128,16 @@ namespace RWave.System
         /// <param name="audioSourceName"></param>
         public void Stop(string audioSourceName)
         {
+            Stop(audioSourceName, (float?)null);
+        }
+
+        /// <summary>
+        /// 指定したAudioSourceNameの再生を止める（フェードアウト時間指定あり）
+        /// </summary>
+        /// <param name="audioSourceName">AudioSourceの名前</param>
+        /// <param name="fadeOutSeconds">フェードアウト時間（秒）。nullの場合は設定のReleaseを使用</param>
+        public void Stop(string audioSourceName, float? fadeOutSeconds)
+        {
             if (!isInitialized)
             {
                 RWaveLogUtility.LogAssertion("AudioSourceContainerが初期化されていません。");
@@ -121,7 +145,7 @@ namespace RWave.System
             }
 
             var soundPlayer = GetAudioSource(audioSourceName);
-            soundPlayer?.Stop();
+            soundPlayer?.Stop(fadeOutSeconds);
         }
 
         /// <summary>
@@ -131,6 +155,17 @@ namespace RWave.System
         /// <param name="audioSourceName">AudioSourceの名前</param>
         public void Stop(RWaveAudioHandler handler, string audioSourceName)
         {
+            Stop(handler, audioSourceName, null);
+        }
+
+        /// <summary>
+        /// ハンドラー指定で再生を停止する（フェードアウト時間指定あり）
+        /// </summary>
+        /// <param name="handler">停止する再生のハンドラー</param>
+        /// <param name="audioSourceName">AudioSourceの名前</param>
+        /// <param name="fadeOutSeconds">フェードアウト時間（秒）。nullの場合は設定のReleaseを使用</param>
+        public void Stop(RWaveAudioHandler handler, string audioSourceName, float? fadeOutSeconds)
+        {
             if (!isInitialized)
             {
                 RWaveLogUtility.LogAssertion("AudioSourceContainerが初期化されていません。");
@@ -138,7 +173,7 @@ namespace RWave.System
             }
 
             var soundPlayer = GetAudioSource(audioSourceName);
-            soundPlayer?.Stop(handler);
+            soundPlayer?.Stop(handler, fadeOutSeconds);
         }
 
         /// <summary>
@@ -148,6 +183,17 @@ namespace RWave.System
         /// <param name="audioSourceName">AudioSourceの名前</param>
         public void Stop(string address, string audioSourceName)
         {
+            Stop(address, audioSourceName, null);
+        }
+
+        /// <summary>
+        /// アドレス指定で該当する全再生を停止する（フェードアウト時間指定あり）
+        /// </summary>
+        /// <param name="address">AudioClipのアドレス</param>
+        /// <param name="audioSourceName">AudioSourceの名前</param>
+        /// <param name="fadeOutSeconds">フェードアウト時間（秒）。nullの場合は設定のReleaseを使用</param>
+        public void Stop(string address, string audioSourceName, float? fadeOutSeconds)
+        {
             if (!isInitialized)
             {
                 RWaveLogUtility.LogAssertion("AudioSourceContainerが初期化されていません。");
@@ -155,7 +201,7 @@ namespace RWave.System
             }
 
             var soundPlayer = GetAudioSource(audioSourceName);
-            soundPlayer?.Stop(address);
+            soundPlayer?.Stop(address, fadeOutSeconds);
         }
 
         /// <summary>
